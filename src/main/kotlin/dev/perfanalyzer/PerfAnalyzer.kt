@@ -1,6 +1,7 @@
 package dev.perfanalyzer
 
 import android.app.Application
+import android.content.pm.ApplicationInfo
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -21,7 +22,13 @@ data class PerfConfig(
     // works exactly as on an emulator) or your machine's real LAN IP here.
     val host: String = "localhost",
     val port: Int = 7001, // must match server/android_bridge.js's ANDROID_PORT
-    val enableLocalAI: Boolean = true
+    val enableLocalAI: Boolean = true,
+    // null = auto (only runs on debuggable builds — see PerfAnalyzer.isDebuggable).
+    // A shipped release build has no dev machine at localhost to ever reach, so
+    // without this a production install would retry the websocket forever for
+    // nothing. Pass true to force it on anyway (e.g. an internal QA build that
+    // isn't flagged debuggable), or false to force it off in a debug build.
+    val enabled: Boolean? = null
 )
 
 object PerfAnalyzer {
@@ -50,6 +57,10 @@ object PerfAnalyzer {
      */
     fun start(context: Application, config: PerfConfig = PerfConfig()) {
         if (running) return
+        if (!(config.enabled ?: isDebuggable(context))) {
+            Log.i(TAG, "Not a debuggable build — PerfAnalyzer disabled (pass PerfConfig(enabled = true) to force it on)")
+            return
+        }
         running = true
         this.config = config
         app = context
@@ -87,6 +98,10 @@ object PerfAnalyzer {
      * Just the bridge connection + Compose recomposition tracking — for apps
      * that only want Modifier.perfTrack()/PerfInterceptor() and already get
      * frames/memory/CPU/crashes for free from the zero-code adb Live Monitor.
+     *
+     * No Context here, so there's no way to auto-detect a production build —
+     * prefer the connect(context, config) overload below so this can disable
+     * itself on release builds instead of retrying a dev machine forever.
      */
     fun connect(config: PerfConfig = PerfConfig()) {
         if (running) return
@@ -95,6 +110,19 @@ object PerfAnalyzer {
         connectWebSocket()
         ComposeTracker.start { event -> sendEvent(event) }
     }
+
+    /** Same as above, but auto-disables on non-debuggable (production) builds — see PerfConfig.enabled. */
+    fun connect(context: Application, config: PerfConfig = PerfConfig()) {
+        if (running) return
+        if (!(config.enabled ?: isDebuggable(context))) {
+            Log.i(TAG, "Not a debuggable build — PerfAnalyzer disabled (pass PerfConfig(enabled = true) to force it on)")
+            return
+        }
+        connect(config)
+    }
+
+    private fun isDebuggable(context: Application): Boolean =
+        (context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
 
     fun stop() {
         running = false
