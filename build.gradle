@@ -1,0 +1,56 @@
+plugins {
+    // Explicit versions, not a version catalog alias — this repo builds standalone
+    // now (extracted from example/myandapp's multi-project build for JitPack), so
+    // there's no root project to resolve libs.plugins.* against. Kept in sync with
+    // example/myandapp/gradle/libs.versions.toml's agp/kotlin versions.
+    id 'com.android.library' version '9.2.1'
+    id 'org.jetbrains.kotlin.plugin.compose' version '2.2.10'
+    id 'maven-publish'
+}
+
+android {
+    namespace 'dev.perfanalyzer'
+    compileSdk 34
+
+    defaultConfig {
+        minSdk 21
+        targetSdk 34
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    buildFeatures {
+        compose = true
+    }
+
+    publishing {
+        singleVariant('release') {
+            withSourcesJar()
+        }
+    }
+}
+
+// JitPack builds this repo and injects the version from the git tag —
+// consumers then use implementation("com.github.parityfix:perf_analyzer:<tag>").
+afterEvaluate {
+    publishing {
+        publications {
+            release(MavenPublication) {
+                from components.release
+                groupId = 'com.github.parityfix'
+                artifactId = 'perf_analyzer'
+            }
+        }
+    }
+}
+
+dependencies {
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+    compileOnly 'androidx.compose.ui:ui:1.6.0'
+    compileOnly 'androidx.compose.runtime:runtime:1.6.0'
+    compileOnly 'androidx.fragment:fragment:1.6.2'
+}
