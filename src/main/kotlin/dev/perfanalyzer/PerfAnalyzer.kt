@@ -13,7 +13,7 @@ import okhttp3.WebSocket
 import okhttp3.WebSocketListener
 import org.json.JSONObject
 
-data class PerfConfig(
+data class PerfConfig @JvmOverloads constructor(
     val groqKey: String? = null,
     val geminiKey: String? = null,
     val claudeKey: String? = null,
@@ -55,6 +55,8 @@ object PerfAnalyzer {
      * over adb (zero code) — reach for connect() instead if you only want
      * Modifier.perfTrack()/PerfInterceptor() and nothing else.
      */
+    @JvmStatic
+    @JvmOverloads
     fun start(context: Application, config: PerfConfig = PerfConfig()) {
         if (running) return
         if (!(config.enabled ?: isDebuggable(context))) {
@@ -103,6 +105,8 @@ object PerfAnalyzer {
      * prefer the connect(context, config) overload below so this can disable
      * itself on release builds instead of retrying a dev machine forever.
      */
+    @JvmStatic
+    @JvmOverloads
     fun connect(config: PerfConfig = PerfConfig()) {
         if (running) return
         running = true
@@ -112,6 +116,8 @@ object PerfAnalyzer {
     }
 
     /** Same as above, but auto-disables on non-debuggable (production) builds — see PerfConfig.enabled. */
+    @JvmStatic
+    @JvmOverloads
     fun connect(context: Application, config: PerfConfig = PerfConfig()) {
         if (running) return
         if (!(config.enabled ?: isDebuggable(context))) {
@@ -124,6 +130,7 @@ object PerfAnalyzer {
     private fun isDebuggable(context: Application): Boolean =
         (context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
 
+    @JvmStatic
     fun stop() {
         running = false
         choreographerAdapter?.stop()

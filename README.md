@@ -1,15 +1,17 @@
 # perf-analyzer-adapter (Android)
 
-Android SDK for [ParityFix](https://github.com/parityfix) — streams real-device
+[![JitPack](https://jitpack.io/v/parityfix/perf_analyzer.svg)](https://jitpack.io/#parityfix/perf_analyzer)
+
+Android SDK for [ParityFix](https://github.com/parityfix/perf_analyzer) — streams real-device
 performance telemetry to the ParityFix dashboard over a websocket. Package:
 `dev.perfanalyzer`.
 
 ## Install
 
-Via [JitPack](https://jitpack.io):
+Via [JitPack](https://jitpack.io/#parityfix/perf_analyzer):
 
 ```groovy
-// settings.gradle / settings.gradle.kts
+// settings.gradle (Groovy)
 dependencyResolutionManagement {
     repositories {
         maven { url 'https://jitpack.io' }
@@ -17,20 +19,56 @@ dependencyResolutionManagement {
 }
 ```
 
+```kotlin
+// settings.gradle.kts (Kotlin DSL)
+dependencyResolutionManagement {
+    repositories {
+        maven { url = uri("https://jitpack.io") }
+    }
+}
+```
+
 ```groovy
-// app/build.gradle
+// app/build.gradle (Groovy)
 dependencies {
-    implementation 'com.github.parityfix:perf-analyzer-adapter:<tag>'
+    // Artifact name = the GitHub repo name (perf_analyzer). Any other name
+    // makes JitPack answer 401 Unauthorized, not 404.
+    implementation 'com.github.parityfix:perf_analyzer:v1.0.2'
+}
+```
+
+```kotlin
+// app/build.gradle.kts (Kotlin DSL)
+dependencies {
+    implementation("com.github.parityfix:perf_analyzer:v1.0.2")
 }
 ```
 
 ## Quick start
 
+### Kotlin
 ```kotlin
+import android.app.Application
+import dev.perfanalyzer.PerfAnalyzer
+
 class MyApp : Application() {
     override fun onCreate() {
         super.onCreate()
         PerfAnalyzer.start(this) // ws://localhost:7001 by default — see PerfConfig
+    }
+}
+```
+
+### Java
+```java
+import android.app.Application;
+import dev.perfanalyzer.PerfAnalyzer;
+
+public class MyApp extends Application {
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        PerfAnalyzer.start(this); // ws://localhost:7001 by default — see PerfConfig
     }
 }
 ```

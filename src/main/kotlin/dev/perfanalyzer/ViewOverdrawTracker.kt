@@ -7,6 +7,7 @@ import android.os.Handler
 import android.os.Looper
 import android.view.View
 import android.view.ViewGroup
+import org.json.JSONArray
 import org.json.JSONObject
 
 // Heuristic overdraw detector — no in-app code needed per screen, just registers
@@ -42,6 +43,11 @@ class ViewOverdrawTracker(private val onEvent: (JSONObject) -> Unit) : Applicati
     // a main-thread stall long enough to trip Android's ANR watchdog.
     private var visitedCount = 0
 
+    // Counts scans so the (heavier, whole-tree) hierarchy snapshot below can
+    // run far less often than the per-leaf overdraw scan — it changes slowly
+    // compared to per-frame data, so every scan would just be wasted work.
+    private var scanCount = 0
+
     private fun scan(activity: Activity) {
         val root = activity.window?.decorView ?: return
         val found = ArrayList<Pair<View, Int>>()
@@ -50,6 +56,12 @@ class ViewOverdrawTracker(private val onEvent: (JSONObject) -> Unit) : Applicati
         found.sortByDescending { it.second }
         for ((view, stack) in found.take(REPORT_LIMIT)) {
             report(view, stack, activity)
+        }
+
+        scanCount++
+        if (scanCount % TREE_EMIT_EVERY == 0) {
+            visitedCount = 0
+            reportTree(buildTree(root, 0, activity), activity)
         }
     }
 
@@ -64,6 +76,39 @@ class ViewOverdrawTracker(private val onEvent: (JSONObject) -> Unit) : Applicati
         }
     }
 
+    // Unlike walk() above, keeps EVERY node (not just qualifying leaves) so the
+    // dashboard can render the actual view nesting, not just a flat offender
+    // list. Shares the same visitedCount cap — reset by the caller first,
+    // exactly like walk()'s own reset in scan().
+    private fun buildTree(view: View, backgroundStack: Int, activity: Activity): JSONObject {
+        val node = JSONObject().apply {
+            put("name", resourceName(view, activity))
+            put("viewClass", view.javaClass.simpleName)
+        }
+        if (++visitedCount > MAX_NODES_PER_SCAN) {
+            node.put("stack", backgroundStack)
+            return node
+        }
+        val stack = backgroundStack + if (view.background != null) 1 else 0
+        node.put("stack", stack)
+        if (view is ViewGroup && view.childCount > 0) {
+            val children = JSONArray()
+            for (i in 0 until view.childCount) children.put(buildTree(view.getChildAt(i), stack, activity))
+            node.put("children", children)
+        }
+        return node
+    }
+
+    private fun reportTree(tree: JSONObject, activity: Activity) {
+        onEvent(JSONObject().apply {
+            put("type", "overdraw_tree")
+            put("platform", "android")
+            put("timestamp", System.currentTimeMillis())
+            put("screen", activity.javaClass.simpleName)
+            put("tree", tree)
+        })
+    }
+
     private fun report(view: View, stack: Int, activity: Activity) {
         val severity = when {
             stack >= 4 -> "high"
@@ -76,6 +121,7 @@ class ViewOverdrawTracker(private val onEvent: (JSONObject) -> Unit) : Applicati
             put("timestamp", System.currentTimeMillis())
             put("view", resourceName(view, activity))
             put("viewClass", view.javaClass.simpleName)
+            put("screen", activity.javaClass.simpleName)
             put("stack", stack)
             put("severity", severity)
         })
@@ -110,6 +156,7 @@ class ViewOverdrawTracker(private val onEvent: (JSONObject) -> Unit) : Applicati
         private const val SCAN_INTERVAL_MS = 1500L
         private const val REPORT_THRESHOLD = 2 // 2+ stacked backgrounds is worth flagging
         private const val REPORT_LIMIT = 30     // matches the dashboard's OverdrawMap cap
+        private const val TREE_EMIT_EVERY = 3   // whole-tree snapshot every 3rd scan (~4.5s)
         // ponytail: hard cap instead of moving the walk to a background thread
         // (View reads aren't thread-safe). Real screens run in the tens-to-low-
         // hundreds of views, so this never triggers in practice — raise it, or

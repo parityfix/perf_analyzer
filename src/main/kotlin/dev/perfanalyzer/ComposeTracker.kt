@@ -47,7 +47,7 @@ internal object ComposeTracker {
     // so it's emitted immediately rather than tallied. Same "layout" event type
     // LayoutTimingTracker.kt uses for XML screens, tagged context:"compose" so
     // the dashboard's one build-time panel covers both.
-    fun recordBuild(name: String, buildMs: Double) {
+    fun recordBuild(name: String, buildMs: Double, location: String?) {
         val emit = onEvent ?: return
         val severity = when {
             buildMs > 500 -> "high"
@@ -63,6 +63,7 @@ internal object ComposeTracker {
             put("screen", name)
             put("context", "compose")
             put("buildMs", buildMs)
+            locationJson(location)?.let { put("location", it) }
         })
     }
 
@@ -85,17 +86,28 @@ internal object ComposeTracker {
                 put("view", name)
                 put("count", count)
                 put("severity", severity)
-                locations[name]?.let { loc ->
-                    val idx = loc.lastIndexOf(':')
-                    if (idx > 0) {
-                        put("location", JSONObject().apply {
-                            put("file", loc.substring(0, idx))
-                            put("line", loc.substring(idx + 1).toIntOrNull() ?: 0)
-                        })
-                    }
-                }
+                locationJson(locations[name])?.let { put("location", it) }
             })
         }
+    }
+}
+
+// Shared by perfTrack/perfTrackBuild below and ComposeTracker's flush()/
+// recordBuild() above — call-site file:line via the current stack trace,
+// since Compose gives no other way to know where a tracked composable lives.
+private fun captureCallSiteLocation(): String? =
+    Throwable().stackTrace
+        .firstOrNull { !it.className.startsWith("dev.perfanalyzer") }
+        ?.let { "${it.fileName}:${it.lineNumber}" }
+
+// "file:line" → {file, line} JSON, or null if there's no location to report.
+private fun locationJson(location: String?): JSONObject? {
+    val loc = location ?: return null
+    val idx = loc.lastIndexOf(':')
+    if (idx <= 0) return null
+    return JSONObject().apply {
+        put("file", loc.substring(0, idx))
+        put("line", loc.substring(idx + 1).toIntOrNull() ?: 0)
     }
 }
 
@@ -104,11 +116,7 @@ internal object ComposeTracker {
  *   Text("hi", modifier = Modifier.perfTrack("Greeting"))
  */
 fun Modifier.perfTrack(name: String): Modifier = composed {
-    val location = remember {
-        Throwable().stackTrace
-            .firstOrNull { !it.className.startsWith("dev.perfanalyzer") }
-            ?.let { "${it.fileName}:${it.lineNumber}" }
-    }
+    val location = remember { captureCallSiteLocation() }
     SideEffect { ComposeTracker.record(name, location) }
     this
 }
@@ -119,6 +127,7 @@ fun Modifier.perfTrack(name: String): Modifier = composed {
  */
 fun Modifier.perfTrackBuild(name: String): Modifier = composed {
     val start = remember { System.nanoTime() }
+    val location = remember { captureCallSiteLocation() }
     // SideEffect reruns on every recomposition, not just the first — this guard
     // keeps recordBuild() a one-shot instead of reporting a growing "elapsed
     // since first composition" on every later rebuild.
@@ -126,7 +135,7 @@ fun Modifier.perfTrackBuild(name: String): Modifier = composed {
     SideEffect {
         if (!reported[0]) {
             reported[0] = true
-            ComposeTracker.recordBuild(name, (System.nanoTime() - start) / 1_000_000.0)
+            ComposeTracker.recordBuild(name, (System.nanoTime() - start) / 1_000_000.0, location)
         }
     }
     this
