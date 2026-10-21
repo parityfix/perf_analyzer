@@ -31,16 +31,18 @@ dependencyResolutionManagement {
 ```groovy
 // app/build.gradle (Groovy)
 dependencies {
-    // Artifact name = the GitHub repo name (perf_analyzer). Any other name
-    // makes JitPack answer 401 Unauthorized, not 404.
-    implementation 'com.github.parityfix:perf_analyzer:v1.0.3'
+    // From v1.0.3 the repo has two modules, so JitPack names the SDK
+    // com.github.parityfix.perf_analyzer:perf_analyzer (note the dot). The old
+    // com.github.parityfix:perf_analyzer now means "every module", including the
+    // Gradle plugin jar — don't use it. A misspelled name gets 401 Unauthorized.
+    implementation 'com.github.parityfix.perf_analyzer:perf_analyzer:v1.0.3'
 }
 ```
 
 ```kotlin
 // app/build.gradle.kts (Kotlin DSL)
 dependencies {
-    implementation("com.github.parityfix:perf_analyzer:v1.0.3")
+    implementation("com.github.parityfix.perf_analyzer:perf_analyzer:v1.0.3")
 }
 ```
 
@@ -110,6 +112,31 @@ plugins {
     id("dev.perfanalyzer") version "v1.0.3"
 }
 ```
+
+**Older `apply plugin:` style** (a root `buildscript { }` block)? Skip the
+`settings.gradle` mapping above — it only applies to `plugins { id ... }` —
+and put the plugin on the buildscript classpath instead:
+
+```groovy
+// build.gradle (project root)
+buildscript {
+    repositories {
+        // ...
+        maven { url 'https://jitpack.io' }   // must be here, not only in settings.gradle
+    }
+    dependencies {
+        // ...
+        classpath 'com.github.parityfix.perf_analyzer:perf-plugin:v1.0.3'
+    }
+}
+
+// app/build.gradle
+apply plugin: 'com.android.application'
+apply plugin: 'dev.perfanalyzer'
+```
+
+Mixing the two (the `settings.gradle` mapping plus `apply plugin:`) fails with
+"Plugin with id 'dev.perfanalyzer' not found".
 
 The plugin also adds the matching SDK as a `debugImplementation` dependency
 (the rewritten code calls into it), so the SDK line above is only needed if
@@ -241,7 +268,7 @@ PerfAnalyzer.start(this, PerfConfig(
 
 Push a git tag (e.g. `v1.0.3`); JitPack builds both modules from it:
 
-- SDK: `com.github.parityfix:perf_analyzer:<tag>`
+- SDK: `com.github.parityfix.perf_analyzer:perf_analyzer:<tag>` (`com.github.parityfix:perf_analyzer:<tag>` is JitPack's all-modules bundle — it drags the plugin jar into apps)
 - Gradle plugin: `com.github.parityfix.perf_analyzer:perf-plugin:<tag>`
 
 Check both resolve on [jitpack.io](https://jitpack.io/#parityfix/perf_analyzer)

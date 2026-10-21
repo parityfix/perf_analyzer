@@ -22,10 +22,12 @@ public class PerfAnalyzerPlugin implements Plugin<Project> {
     public void apply(Project project) {
         project.getPluginManager().withPlugin("com.android.application", applied -> {
             // The rewritten bytecode calls dev.perfanalyzer.PerfOkHttp — without the SDK
-            // on the debug classpath, the first OkHttpClient would crash the app.
+            // on the debug classpath, the first OkHttpClient would crash the app. The module
+            // coordinate, not com.github.parityfix:perf_analyzer: since this repo has two
+            // modules, JitPack serves that one as a bundle that includes this plugin jar.
             String version = PerfAnalyzerPlugin.class.getPackage().getImplementationVersion();
             if (version != null && !"unspecified".equals(version)) {
-                project.getDependencies().add(DEBUG + "Implementation", "com.github.parityfix:perf_analyzer:" + version);
+                project.getDependencies().add(DEBUG + "Implementation", "com.github.parityfix.perf_analyzer:perf_analyzer:" + version);
             }
 
             ApplicationAndroidComponentsExtension components =
