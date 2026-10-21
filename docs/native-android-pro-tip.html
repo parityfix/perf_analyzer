@@ -1,0 +1,189 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  :root {
+    --bg: #18171f; --surface: #201f2a; --surface2: #2a2836; --border: #3a3848; --borderSoft: #2d2b38;
+    --hi: #ffffff; --text: #aca7cb; --text2: #c6c2de; --muted: #8b86a6; --faint: #615d76;
+    --accent: #ff00e9; --sage: #46d6a0; --warn: #f2c14e;
+    --mono: 'SF Mono', ui-monospace, Menlo, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); width: 1600px; font-family: -apple-system, 'SF Pro Text', 'Helvetica Neue', sans-serif; color: var(--text); }
+  .page { padding: 44px 52px 34px; position: relative; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
+  footer { margin-top: auto !important; padding-top: 18px; }
+  .alt { margin-top: 10px; border: 1px dashed var(--border); border-radius: 12px; padding: 14px 16px; background: var(--bg); }
+  .alt h4 { color: var(--sage); font-size: 15.5px; margin-bottom: 5px; }
+  .alt p { font-size: 14.5px; line-height: 1.5; }
+  .alt p b { color: var(--text2); }
+  .alt code { background: var(--surface2); color: var(--hi); padding: 1px 7px; border-radius: 6px; font-family: var(--mono); font-size: 13px; }
+  .glow { position: absolute; width: 700px; height: 700px; border-radius: 50%; background: radial-gradient(circle, rgba(255,0,233,.16), transparent 65%); top: -380px; right: -200px; }
+
+  header { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 30px; position: relative; }
+  .chip { display: inline-flex; align-items: center; gap: 8px; background: rgba(255,0,233,.14); color: var(--accent); border: 1px solid rgba(255,0,233,.45);
+          font-weight: 800; font-size: 14px; letter-spacing: .14em; padding: 7px 14px; border-radius: 999px; }
+  h1 { color: var(--hi); font-size: 44px; font-weight: 800; letter-spacing: -.02em; margin-top: 14px; }
+  h1 span { color: var(--accent); }
+  .sub { font-size: 18px; color: var(--muted); margin-top: 8px; }
+  .brand { text-align: right; font-size: 15px; color: var(--muted); line-height: 1.6; }
+  .brand b { color: var(--hi); font-size: 20px; }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; position: relative; }
+  .card { background: var(--surface); border: 1px solid var(--borderSoft); border-radius: 18px; padding: 26px 28px; }
+  .card h2 { color: var(--hi); font-size: 23px; font-weight: 750; display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+  .card .hint { font-size: 15px; color: var(--muted); margin-bottom: 18px; }
+  .badge { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; font-size: 17px; font-weight: 800; color: var(--bg); background: var(--accent); }
+
+  .step { display: grid; grid-template-columns: 34px 1fr; gap: 14px; padding: 14px 0; border-top: 1px solid var(--borderSoft); }
+  .step:first-of-type { border-top: 0; padding-top: 4px; }
+  .n { width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--accent); color: var(--accent); display: grid; place-items: center; font-weight: 800; font-size: 14px; }
+  .step h3 { color: var(--hi); font-size: 17.5px; font-weight: 700; margin-bottom: 6px; }
+  .step h3 em { font-style: normal; color: var(--muted); font-weight: 500; font-size: 14.5px; font-family: var(--mono); margin-left: 6px; }
+  .step p { font-size: 15px; line-height: 1.5; }
+  .step p b { color: var(--text2); }
+  code, pre { font-family: var(--mono); }
+  pre { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; font-size: 13.5px; line-height: 1.55; color: var(--text2); margin: 4px 0 6px; white-space: pre; }
+  pre .k { color: var(--accent); } pre .s { color: var(--sage); } pre .c { color: var(--faint); }
+  p code { background: var(--surface2); color: var(--hi); padding: 1px 7px; border-radius: 6px; font-size: 13.5px; }
+
+  /* flow timeline */
+  .flow .step { border-top: 0; position: relative; padding: 10px 0 16px; }
+  .flow .step::before { content: ''; position: absolute; left: 15px; top: 44px; bottom: -6px; width: 2px; background: linear-gradient(var(--accent), rgba(255,0,233,.15)); }
+  .flow .step.last::before { display: none; }
+  .flow .step.last .n { background: var(--accent); color: var(--bg); }
+  .term { display: inline-block; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 5px 11px; font-family: var(--mono); font-size: 13px; color: var(--sage); margin-top: 6px; }
+
+  .bottom { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; margin-top: 26px; position: relative; }
+  .chips { display: flex; flex-wrap: wrap; gap: 10px; }
+  .chips span { background: var(--surface2); border: 1px solid var(--border); color: var(--text2); border-radius: 999px; padding: 8px 14px; font-size: 14.5px; }
+  .chips span b { color: var(--sage); font-weight: 700; }
+
+  .tips { border-color: rgba(255,0,233,.4); background: linear-gradient(160deg, rgba(255,0,233,.09), var(--surface) 55%); }
+  .tips ul { list-style: none; display: grid; gap: 11px; }
+  .tips li { font-size: 15px; line-height: 1.45; padding-left: 26px; position: relative; }
+  .tips li::before { content: '✦'; position: absolute; left: 0; color: var(--accent); }
+  .tips li b { color: var(--hi); }
+  .tips li code { background: var(--surface2); color: var(--hi); padding: 1px 6px; border-radius: 6px; font-size: 13px; }
+
+  footer { margin-top: 22px; display: flex; justify-content: space-between; font-size: 13.5px; color: var(--faint); position: relative; }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="glow"></div>
+
+  <header>
+    <div>
+      <div class="chip">✦ PRO TIP</div>
+      <h1>Native Android Performance Analyzer — <span>Setup &amp; Flow</span></h1>
+      <div class="sub">Java · Kotlin · XML views · Jetpack Compose — real-device numbers judged the way Android Studio judges them</div>
+    </div>
+    <div class="brand"><b>ParityFix</b><br>Android SDK v1.0.3</div>
+  </header>
+
+  <div class="grid">
+    <!-- SETUP -->
+    <section class="card">
+      <h2><span class="badge">1</span>One-time setup</h2>
+      <div class="hint">About 5 minutes. Debug builds only — release builds are never touched.</div>
+
+      <div class="step"><div class="n">1</div><div>
+        <h3>Point Gradle at JitPack <em>settings.gradle</em></h3>
+<pre><span class="k">pluginManagement</span> {
+  repositories { gradlePluginPortal(); google(); mavenCentral()
+                 maven { url <span class="s">'https://jitpack.io'</span> } }
+  resolutionStrategy { eachPlugin { <span class="k">if</span> (requested.id.id == <span class="s">'dev.perfanalyzer'</span>)
+    useModule(<span class="s">"com.github.parityfix.perf_analyzer:perf-plugin:${requested.version}"</span>) } }
+}</pre>
+      </div></div>
+
+      <div class="step"><div class="n">2</div><div>
+        <h3>Apply the plugin <em>app/build.gradle</em></h3>
+<pre><span class="k">plugins</span> { id <span class="s">'dev.perfanalyzer'</span> version <span class="s">'v1.0.3'</span> }</pre>
+        <p>Adds the SDK and puts <b>PerfInterceptor</b> on every OkHttp client (Retrofit, Coil, Glide) — <b>API calls with zero code</b>.</p>
+      </div></div>
+
+      <div class="step"><div class="n">3</div><div>
+        <h3>Start it once <em>Application.onCreate()</em></h3>
+<pre>PerfAnalyzer.start(<span class="k">this</span>)   <span class="c">// frames, memory, overdraw, screen build time, crashes</span></pre>
+      </div></div>
+
+      <div class="step"><div class="n">4</div><div>
+        <h3>Get the phone ready</h3>
+        <p>Developer options → <b>USB debugging</b> on → plug in → tap <b>Allow</b>. <code>adb</code> is found automatically from your Android Studio SDK.</p>
+      </div></div>
+    </section>
+
+    <!-- FLOW -->
+    <section class="card flow">
+      <h2><span class="badge">2</span>Every test run</h2>
+      <div class="hint">One module, 5 runs, one report.</div>
+
+      <div class="step"><div class="n">1</div><div>
+        <h3>Start ParityFix</h3>
+        <p>Run <code>npm start</code> and wait for the USB tunnel line:</p>
+        <span class="term">🔌 adb reverse tcp:7001 set up for &lt;your device&gt;</span>
+      </div></div>
+
+      <div class="step"><div class="n">2</div><div>
+        <h3>Open your debug build on the phone</h3>
+        <p>The dashboard header turns to <b>Android connected</b>.</p>
+      </div></div>
+
+      <div class="step"><div class="n">3</div><div>
+        <h3>Start a Module Test</h3>
+        <p>Platform toggle → <b>Android</b> → Module Test → enter the screen name → <b>Start</b>.</p>
+      </div></div>
+
+      <div class="step"><div class="n">4</div><div>
+        <h3>Exercise the screen ×5</h3>
+        <p>Scroll, tap, load data. Between runs, <b>back out and reopen the screen</b>, then hit <b>Restart run</b>. Same path every time.</p>
+      </div></div>
+
+      <div class="step last"><div class="n">✦</div><div>
+        <h3>Generate report</h3>
+        <p>Score, slowest components with file names, and Android-specific fixes.</p>
+      </div></div>
+
+      <div class="alt">
+        <h4>No SDK in the app? Zero-code mode</h4>
+        <p><code>npm start</code> → <b>2) Android native — live monitor</b> → pick the device and app.
+        Frames, memory, CPU and crashes over adb, with no app changes. Best for profileable builds.</p>
+      </div>
+    </section>
+  </div>
+
+  <div class="bottom">
+    <section class="card">
+      <h2 style="font-size:20px;margin-bottom:16px">What the report shows</h2>
+      <div class="chips">
+        <span><b>Jank</b> vs the device's own frame deadline (8.3ms at 120Hz)</span>
+        <span><b>Main thread</b> vs <b>RenderThread</b> / GPU</span>
+        <span><b>Slow screen builds</b> · XML &amp; Compose</span>
+        <span><b>Compose</b> recompositions</span>
+        <span><b>Overdraw</b> by view id</span>
+        <span><b>API calls</b> · size &amp; duration</span>
+        <span><b>Memory</b> PSS &amp; growth</span>
+        <span><b>Build badge</b> · debuggable / profileable</span>
+      </div>
+    </section>
+
+    <section class="card tips">
+      <h2 style="font-size:20px;margin-bottom:14px;color:var(--accent)">✦ Pro tips</h2>
+      <ul>
+        <li><b>Debuggable builds run slower than release.</b> Compare debug reports with each other. For Android Studio–comparable numbers, test a <b>profileable</b> build with the adb live monitor.</li>
+        <li><b>No API calls in the report?</b> The plugin isn't applied, or the app uses Volley / <code>HttpURLConnection</code>.</li>
+        <li><b>JitPack says 401?</b> Wrong artifact name — it's <code>perf_analyzer</code>, with an underscore.</li>
+        <li><b>Using the adb live monitor too?</b> Call <code>PerfAnalyzer.connect()</code> instead of <code>start()</code>, or every frame counts twice.</li>
+      </ul>
+    </section>
+  </div>
+
+  <footer>
+    <span>ParityFix · Native Android</span>
+    <span>Full setup: Android adapter README · github.com/parityfix/perf_analyzer</span>
+  </footer>
+</div>
+</body>
+</html>
