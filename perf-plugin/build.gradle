@@ -1,0 +1,40 @@
+// Gradle plugin `dev.perfanalyzer`: rewrites a debug build's bytecode so every
+// OkHttpClient gets PerfInterceptor — API capture with no app code. Plain Java,
+// not Kotlin: a Kotlin plugin's stdlib can clash with the one Gradle embeds.
+plugins {
+    id 'java-gradle-plugin'
+    id 'maven-publish'
+}
+
+// JitPack serves a multi-module repo's extra modules as
+// com.github.<user>.<repo>:<module>:<tag> — the root SDK keeps com.github.parityfix:perf_analyzer.
+group = 'com.github.parityfix.perf_analyzer'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
+}
+
+dependencies {
+    // Oldest AGP whose Instrumentation API we rely on; AGP supplies it (and ASM) at runtime.
+    compileOnly 'com.android.tools.build:gradle-api:8.1.4'
+    compileOnly 'org.ow2.asm:asm:9.7'
+
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.ow2.asm:asm:9.7'
+    testImplementation 'com.android.tools.build:gradle-api:8.1.4'
+}
+
+// The plugin adds the matching SDK version for the app — read back from here.
+jar {
+    manifest { attributes 'Implementation-Version': project.version }
+}
+
+gradlePlugin {
+    plugins {
+        perfAnalyzer {
+            id = 'dev.perfanalyzer'
+            implementationClass = 'dev.perfanalyzer.plugin.PerfAnalyzerPlugin'
+        }
+    }
+}

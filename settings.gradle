@@ -13,3 +13,5 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "perf-analyzer-adapter"
+// Gradle plugin that adds PerfInterceptor to every OkHttpClient (see perf-plugin/build.gradle).
+include ':perf-plugin'

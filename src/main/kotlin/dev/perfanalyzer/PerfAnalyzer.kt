@@ -124,11 +124,22 @@ object PerfAnalyzer {
             Log.i(TAG, "Not a debuggable build — PerfAnalyzer disabled (pass PerfConfig(enabled = true) to force it on)")
             return
         }
+        app = context
         connect(config)
     }
 
     private fun isDebuggable(context: Application): Boolean =
         (context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
+
+    // Debuggable builds run slower than release (debug checks, less AOT), so the
+    // report labels which kind of build its numbers came from. profileable =
+    // <profileable android:shell="true"/>, what Android Studio profiles against.
+    private fun appInfo(context: Application) = JSONObject().apply {
+        put("type", "app_info")
+        put("platform", "android")
+        put("debuggable", isDebuggable(context))
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) put("profileable", context.applicationInfo.isProfileableByShell)
+    }
 
     @JvmStatic
     fun stop() {
@@ -174,6 +185,7 @@ object PerfAnalyzer {
         ws = httpClient.newWebSocket(request, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
                 Log.i(TAG, "WebSocket connected to bridge")
+                app?.let { webSocket.send(appInfo(it).toString()) }
                 synchronized(eventQueue) {
                     eventQueue.forEach { webSocket.send(it.toString()) }
                     eventQueue.clear()

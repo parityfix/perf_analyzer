@@ -47,11 +47,21 @@ internal class FrameMetricsAdapter(private val onEvent: (JSONObject) -> Unit) : 
     private fun report(frameMetrics: FrameMetrics) {
         fun ns(metric: Int) = frameMetrics.getMetric(metric)
         val totalNs = ns(FrameMetrics.TOTAL_DURATION)
-        val buildNs = ns(FrameMetrics.LAYOUT_MEASURE_DURATION) + ns(FrameMetrics.ANIMATION_DURATION) +
-            ns(FrameMetrics.INPUT_HANDLING_DURATION)
-        val rasterNs = ns(FrameMetrics.DRAW_DURATION) + ns(FrameMetrics.SYNC_DURATION) +
-            ns(FrameMetrics.COMMAND_ISSUE_DURATION) + ns(FrameMetrics.SWAP_BUFFERS_DURATION) + gpuNs(frameMetrics)
+        // Same thread split Studio's frame view / JankStats use. DRAW (View#draw
+        // recording display lists) and SYNC run on the main thread — counting
+        // them as GPU made slow main-thread frames look like GPU problems.
+        val delayNs = ns(FrameMetrics.UNKNOWN_DELAY_DURATION)
+        val inputNs = ns(FrameMetrics.INPUT_HANDLING_DURATION)
+        val animNs = ns(FrameMetrics.ANIMATION_DURATION)
+        val layoutNs = ns(FrameMetrics.LAYOUT_MEASURE_DURATION)
+        val drawNs = ns(FrameMetrics.DRAW_DURATION)
+        val syncNs = ns(FrameMetrics.SYNC_DURATION)
+        val mainNs = delayNs + inputNs + animNs + layoutNs + drawNs + syncNs
+        // RenderThread only. GPU work runs in parallel and is already inside
+        // TOTAL_DURATION, so it's reported on its own instead of added here.
+        val renderNs = ns(FrameMetrics.COMMAND_ISSUE_DURATION) + ns(FrameMetrics.SWAP_BUFFERS_DURATION)
         val totalMs = totalNs / 1_000_000.0
+        fun ms(v: Long) = v / 1_000_000.0
         val severity = when {
             totalMs > 33 -> "critical"
             totalMs > 16.6 -> "high"
@@ -64,8 +74,14 @@ internal class FrameMetricsAdapter(private val onEvent: (JSONObject) -> Unit) : 
             put("severity", severity)
             put("type", "frame")
             put("durationMs", totalMs)
-            put("build", buildNs / 1_000_000.0)
-            put("raster", rasterNs / 1_000_000.0)
+            put("build", ms(mainNs))
+            put("raster", ms(renderNs))
+            put("gpu", ms(gpuNs(frameMetrics)))
+            deadlineNs(frameMetrics)?.let { put("deadlineMs", ms(it)) }
+            put("phases", JSONObject().apply {
+                put("delay", ms(delayNs)); put("input", ms(inputNs)); put("animation", ms(animNs))
+                put("measureLayout", ms(layoutNs)); put("draw", ms(drawNs)); put("sync", ms(syncNs))
+            })
         })
     }
 
@@ -73,6 +89,12 @@ internal class FrameMetricsAdapter(private val onEvent: (JSONObject) -> Unit) : 
     private fun gpuNs(frameMetrics: FrameMetrics): Long {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return 0L
         return try { frameMetrics.getMetric(FrameMetrics.GPU_DURATION) } catch (_: Exception) { 0L }
+    }
+
+    // The frame's real budget (8.3ms at 120Hz, 16.6ms at 60Hz) — API 31+.
+    private fun deadlineNs(frameMetrics: FrameMetrics): Long? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return null
+        return try { frameMetrics.getMetric(FrameMetrics.DEADLINE).takeIf { it > 0 } } catch (_: Exception) { null }
     }
 
     override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {}
