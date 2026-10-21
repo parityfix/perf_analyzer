@@ -35,14 +35,14 @@ dependencies {
     // com.github.parityfix.perf_analyzer:perf_analyzer (note the dot). The old
     // com.github.parityfix:perf_analyzer now means "every module", including the
     // Gradle plugin jar — don't use it. A misspelled name gets 401 Unauthorized.
-    implementation 'com.github.parityfix.perf_analyzer:perf_analyzer:v1.0.4'
+    implementation 'com.github.parityfix.perf_analyzer:perf_analyzer:v1.0.5'
 }
 ```
 
 ```kotlin
 // app/build.gradle.kts (Kotlin DSL)
 dependencies {
-    implementation("com.github.parityfix.perf_analyzer:perf_analyzer:v1.0.4")
+    implementation("com.github.parityfix.perf_analyzer:perf_analyzer:v1.0.5")
 }
 ```
 
@@ -101,7 +101,7 @@ pluginManagement {
 // app/build.gradle (Groovy)
 plugins {
     id 'com.android.application'
-    id 'dev.perfanalyzer' version 'v1.0.4'
+    id 'dev.perfanalyzer' version 'v1.0.5'
 }
 ```
 
@@ -109,7 +109,7 @@ plugins {
 // app/build.gradle.kts (Kotlin DSL)
 plugins {
     id("com.android.application")
-    id("dev.perfanalyzer") version "v1.0.4"
+    id("dev.perfanalyzer") version "v1.0.5"
 }
 ```
 
@@ -126,7 +126,7 @@ buildscript {
     }
     dependencies {
         // ...
-        classpath 'com.github.parityfix.perf_analyzer:perf-plugin:v1.0.4'
+        classpath 'com.github.parityfix.perf_analyzer:perf-plugin:v1.0.5'
     }
 }
 
@@ -266,7 +266,7 @@ PerfAnalyzer.start(this, PerfConfig(
 
 ## Releasing (maintainers)
 
-Push a git tag (e.g. `v1.0.4`); JitPack builds both modules from it:
+Push a git tag (e.g. `v1.0.5`); JitPack builds both modules from it:
 
 - SDK: `com.github.parityfix.perf_analyzer:perf_analyzer:<tag>` (`com.github.parityfix:perf_analyzer:<tag>` is JitPack's all-modules bundle — it drags the plugin jar into apps)
 - Gradle plugin: `com.github.parityfix.perf_analyzer:perf-plugin:<tag>`

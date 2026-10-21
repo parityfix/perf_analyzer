@@ -4,7 +4,6 @@ import android.app.Activity
 import android.os.Bundle
 import android.os.SystemClock
 import android.view.View
-import android.view.ViewTreeObserver
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.FragmentManager
@@ -24,14 +23,9 @@ internal object FragmentLayoutTimingTracker {
             object : FragmentManager.FragmentLifecycleCallbacks() {
                 override fun onFragmentViewCreated(fm: FragmentManager, f: Fragment, v: View, savedInstanceState: Bundle?) {
                     val start = SystemClock.elapsedRealtime()
-                    val observer = v.viewTreeObserver
-                    val listener = object : ViewTreeObserver.OnGlobalLayoutListener {
-                        override fun onGlobalLayout() {
-                            if (observer.isAlive) observer.removeOnGlobalLayoutListener(this)
-                            emitLayoutEvent(onEvent, f.javaClass.simpleName, (SystemClock.elapsedRealtime() - start).toDouble(), countViews(v))
-                        }
+                    onFirstLayout(v) {
+                        emitLayoutEvent(onEvent, f.javaClass.simpleName, (SystemClock.elapsedRealtime() - start).toDouble(), countViews(v))
                     }
-                    observer.addOnGlobalLayoutListener(listener)
                 }
             },
             true,

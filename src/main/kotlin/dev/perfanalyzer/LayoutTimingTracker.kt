@@ -27,14 +27,9 @@ class LayoutTimingTracker(private val onEvent: (JSONObject) -> Unit) : Applicati
     override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
         val start = SystemClock.elapsedRealtime()
         val decorView = activity.window?.decorView ?: return
-        val observer = decorView.viewTreeObserver
-        val listener = object : ViewTreeObserver.OnGlobalLayoutListener {
-            override fun onGlobalLayout() {
-                if (observer.isAlive) observer.removeOnGlobalLayoutListener(this)
-                emitLayoutEvent(onEvent, activity.javaClass.simpleName, (SystemClock.elapsedRealtime() - start).toDouble(), countViews(decorView))
-            }
+        onFirstLayout(decorView) {
+            emitLayoutEvent(onEvent, activity.javaClass.simpleName, (SystemClock.elapsedRealtime() - start).toDouble(), countViews(decorView))
         }
-        observer.addOnGlobalLayoutListener(listener)
 
         if (fragmentApiAvailable) {
             // Belt-and-suspenders on top of the Class.forName check: a version
@@ -67,6 +62,23 @@ class LayoutTimingTracker(private val onEvent: (JSONObject) -> Unit) : Applicati
             }
         }
     }
+}
+
+// Runs `block` once, at the first completed layout pass of `view`. The observer a
+// view hands out before it's attached is merged into the window's and then dies,
+// so removing through that captured reference silently failed and the listener
+// fired on every later layout — re-reporting "time since creation" (minutes).
+// Always remove through the view's *current* observer, and guard with a flag.
+internal fun onFirstLayout(view: View, block: () -> Unit) {
+    view.viewTreeObserver.addOnGlobalLayoutListener(object : ViewTreeObserver.OnGlobalLayoutListener {
+        private var done = false
+        override fun onGlobalLayout() {
+            view.viewTreeObserver.removeOnGlobalLayoutListener(this)
+            if (done) return
+            done = true
+            block()
+        }
+    })
 }
 
 // Shared by LayoutTimingTracker (Activity decor view) and FragmentLayoutTimingTracker
